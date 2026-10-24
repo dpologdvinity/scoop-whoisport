@@ -1,0 +1,32 @@
+# Keeps the Scoop manifest on the latest whoisport release.
+#
+# This bucket lives in its own repository (like the Homebrew tap) so that the whoisport
+# repository's `master` can be protected: a release workflow there cannot push to a
+# protected branch, but this repository's own workflow can push here.
+name: Update manifest
+
+on:
+  schedule:
+    - cron: "41 */6 * * *" # every six hours
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Point the manifest at the latest release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: scripts/update.sh
+      - name: Commit if it changed
+        run: |
+          git diff --quiet bucket/whoisport.json && { echo "already up to date"; exit 0; }
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "chore: update whoisport to the latest release"
+          git push
